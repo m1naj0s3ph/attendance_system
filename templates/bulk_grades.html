@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>توزيع الدرجات الجماعي - نظام الحضور</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- زر فتح الشريط الجانبي -->
+    <button class="menu-toggle" id="menuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- الشريط الجانبي -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h4>🏫 نظام الحضور</h4>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li><a href="/"><i class="fas fa-home"></i> الصفحة الرئيسية</a></li>
+            <li><a href="/daily_report"><i class="fas fa-file-alt"></i> التقرير اليومي</a></li>
+            <li><a href="/admin"><i class="fas fa-chart-bar"></i> التقارير الشهرية</a></li>
+            <li><a href="/manage_students"><i class="fas fa-users"></i> إدارة الطلاب</a></li>
+            <li><a href="/bulk_grades" class="active"><i class="fas fa-tasks"></i> توزيع الدرجات</a></li>
+            <li><a href="/add_student"><i class="fas fa-user-plus"></i> إضافة طالب</a></li>
+            <li><a href="/generate_whatsapp_links"><i class="fab fa-whatsapp"></i> روابط واتساب</a></li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user"></i> {{ username }}
+            </div>
+            <a href="/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </a>
+        </div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content">
+        <div class="container-box">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <a href="/" class="btn btn-secondary">
+                    <i class="fas fa-home"></i> الصفحة الرئيسية
+                </a>
+                <h2 class="text-center mb-0"><i class="fas fa-tasks"></i> توزيع الدرجات الجماعي</h2>
+                <a href="/admin" class="btn btn-info">
+                    <i class="fas fa-chart-bar"></i> لوحة التحكم
+                </a>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} fade-in">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- نموذج إدخال الدرجات -->
+            <div class="form-container mb-4">
+                <h4 class="mb-3"><i class="fas fa-edit"></i> إدخال الدرجات</h4>
+                <form method="POST" action="/bulk_grades">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="student_id" class="form-label">رقم الطالب *</label>
+                                <input type="text" class="form-control" id="student_id" name="student_id" required placeholder="أدخل رقم الطالب">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="grade" class="form-label">درجة الامتحان</label>
+                                <input type="text" class="form-control" id="grade" name="grade" placeholder="أدخل الدرجة">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="hw_status" class="form-label">حالة الواجب</label>
+                                <select class="form-select" id="hw_status" name="hw_status">
+                                    <option value="اتعمل">اتعمل</option>
+                                    <option value="متعملش">متعملش</option>
+                                    <option value="-">لا يوجد</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-save"></i> حفظ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- قائمة الطلاب -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3><i class="fas fa-users"></i> قائمة الطلاب</h3>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>رقم الطالب</th>
+                                <th>اسم الطالب</th>
+                                <th>رقم ولي الأمر</th>
+                                <th>الحصص</th>
+                                <th>الإجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td><strong>{{ student.id }}</strong></td>
+                                <td>{{ student.student_name }}</td>
+                                <td>{{ student.parent_number }}</td>
+                                <td>
+                                    {% set student_classes = get_student_classes(student.id) %}
+                                    {% if student_classes %}
+                                        {% for class in student_classes %}
+                                            <div class="mb-1">
+                                                <small class="badge bg-info">
+                                                    {% if class.day_of_week == 'sunday' %}الأحد
+                                                    {% elif class.day_of_week == 'monday' %}الإثنين
+                                                    {% elif class.day_of_week == 'tuesday' %}الثلاثاء
+                                                    {% elif class.day_of_week == 'wednesday' %}الأربعاء
+                                                    {% elif class.day_of_week == 'thursday' %}الخميس
+                                                    {% elif class.day_of_week == 'friday' %}الجمعة
+                                                    {% elif class.day_of_week == 'saturday' %}السبت
+                                                    {% endif %}
+                                                    : {{ class.start_time }}-{{ class.end_time }}
+                                                </small>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">لا توجد حصص</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="/student/{{ student.id }}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-eye"></i> عرض
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

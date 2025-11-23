@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>التقارير الشهرية - نظام الحضور</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- زر فتح الشريط الجانبي -->
+    <button class="menu-toggle" id="menuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- الشريط الجانبي -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h4>🏫 نظام الحضور</h4>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li><a href="/"><i class="fas fa-home"></i> الصفحة الرئيسية</a></li>
+            <li><a href="/daily_report"><i class="fas fa-file-alt"></i> التقرير اليومي</a></li>
+            <li><a href="/admin" class="active"><i class="fas fa-chart-bar"></i> التقارير الشهرية</a></li>
+            <li><a href="/manage_students"><i class="fas fa-users"></i> إدارة الطلاب</a></li>
+            <li><a href="/bulk_grades"><i class="fas fa-tasks"></i> توزيع الدرجات</a></li>
+            <li><a href="/add_student"><i class="fas fa-user-plus"></i> إضافة طالب</a></li>
+            <li><a href="/generate_whatsapp_links"><i class="fab fa-whatsapp"></i> روابط واتساب</a></li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user"></i> {{ username }}
+            </div>
+            <a href="/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </a>
+        </div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content">
+        <!-- التنبيهات -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} fade-in">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- الإحصائيات -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.2f"|format(total_paid) }} ج.م</div>
+                <div class="stat-label">إجمالي التحصيل</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.1f"|format(overall_attendance) }}%</div>
+                <div class="stat-label">معدل الحضور</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ total_students }}</div>
+                <div class="stat-label">عدد الطلاب</div>
+            </div>
+        </div>
+
+        <!-- أزرار التحكم -->
+        <div class="container-box">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-chart-bar"></i> التقارير الشهرية - {{ month }}</h2>
+                <div class="btn-group">
+                    <a href="/daily_report" class="btn btn-info">
+                        <i class="fas fa-file-alt"></i> التقرير اليومي
+                    </a>
+                    <a href="/download_monthly_reports" class="btn btn-primary">
+                        <i class="fas fa-download"></i> تحميل التقارير
+                    </a>
+                    <a href="/add_student" class="btn btn-success">
+                        <i class="fas fa-user-plus"></i> إضافة طالب
+                    </a>
+                </div>
+            </div>
+
+            <!-- جدول الطلاب -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3><i class="fas fa-users"></i> قائمة الطلاب</h3>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>الكود</th>
+                                <th>اسم الطالب</th>
+                                <th>ولي الأمر</th>
+                                <th>أيام الحصص</th>
+                                <th>الحضور</th>
+                                <th>الغياب</th>
+                                <th>معدل الحضور</th>
+                                <th>المبلغ المدفوع</th>
+                                <th>إرسال تقرير</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for st in students %}
+                                <tr>
+                                    <td><strong>{{ st.id }}</strong></td>
+                                    <td>{{ st.student_name }}</td>
+                                    <td>{{ st.parent_number }}</td>
+                                    <td>{{ st.class_days }}</td>
+                                    <td>
+                                        <span class="badge badge-success">{{ st.present_count }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-danger">{{ st.absent_count }}</span>
+                                    </td>
+                                    <td>
+                                        {% if st.attendance_rate >= 80 %}
+                                            <span class="status-present">{{ "%.1f"|format(st.attendance_rate) }}%</span>
+                                        {% elif st.attendance_rate >= 60 %}
+                                            <span class="text-warning">{{ "%.1f"|format(st.attendance_rate) }}%</span>
+                                        {% else %}
+                                            <span class="status-absent">{{ "%.1f"|format(st.attendance_rate) }}%</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><strong>{{ "%.2f"|format(st.paid_amount) }} ج.م</strong></td>
+                                    
+                                    <td>
+                                        <a href="/send_monthly_report/{{ st.id }}" 
+                                           class="btn btn-warning btn-sm" 
+                                           title="إرسال التقرير الشهري لولي الأمر"
+                                           target="_blank">
+                                           <i class="fas fa-paper-plane"></i> إرسال
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- المكتبات -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

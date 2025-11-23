@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>التقرير اليومي - نظام الحضور</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- زر فتح الشريط الجانبي -->
+    <button class="menu-toggle" id="menuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- الشريط الجانبي -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h4>🏫 نظام الحضور</h4>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li><a href="/"><i class="fas fa-home"></i> الصفحة الرئيسية</a></li>
+            <li><a href="/daily_report" class="active"><i class="fas fa-file-alt"></i> التقرير اليومي</a></li>
+            <li><a href="/admin"><i class="fas fa-chart-bar"></i> التقارير الشهرية</a></li>
+            <li><a href="/manage_students"><i class="fas fa-users"></i> إدارة الطلاب</a></li>
+            <li><a href="/bulk_grades"><i class="fas fa-tasks"></i> توزيع الدرجات</a></li>
+            <li><a href="/add_student"><i class="fas fa-user-plus"></i> إضافة طالب</a></li>
+            <li><a href="/generate_whatsapp_links"><i class="fab fa-whatsapp"></i> روابط واتساب</a></li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user"></i> {{ username }}
+            </div>
+            <a href="/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </a>
+        </div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content">
+        <!-- التنبيهات -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} fade-in">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- الإحصائيات -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ students|length }}</div>
+                <div class="stat-label">إجمالي الطلاب</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ students|selectattr("status", "equalto", "Present")|list|length }}</div>
+                <div class="stat-label">الحاضرين</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ students|selectattr("status", "equalto", "Absent")|list|length }}</div>
+                <div class="stat-label">الغائبين</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.2f"|format(total_paid) }} ج.م</div>
+                <div class="stat-label">المبلغ المحصل</div>
+            </div>
+        </div>
+
+        <!-- أزرار التحكم -->
+        <div class="container-box">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-file-alt"></i> التقرير اليومي - {{ date }}</h2>
+                <div class="btn-group">
+                    <a href="/bulk_grades" class="btn btn-warning">
+                        <i class="fas fa-tasks"></i> توزيع الدرجات
+                    </a>
+                    <a href="/generate_whatsapp_links" class="btn btn-success">
+                        <i class="fab fa-whatsapp"></i> روابط واتساب
+                    </a>
+                    <a href="/download_daily_summary" class="btn btn-primary">
+                        <i class="fas fa-download"></i> تحميل التقرير
+                    </a>
+                </div>
+            </div>
+
+            <!-- جدول الطلاب -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h3><i class="fas fa-users"></i> قائمة الطلاب</h3>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>الكود</th>
+                                <th>اسم الطالب</th>
+                                <th>ولي الأمر</th>
+                                <th>الحالة</th>
+                                <th>الدفع</th>
+                                <th>الامتحان</th>
+                                <th>الواجب</th>
+                                <th>الرسوم</th>
+                                <th>إرسال واتساب</th>
+                                <th>تقرير الحاضر</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for st in students %}
+                                <tr>
+                                    <td><strong>{{ st.id }}</strong></td>
+                                    <td>{{ st.student_name }}</td>
+                                    <td>{{ st.parent_number }}</td>
+
+                                    <td class="{% if st.status == 'Present' %}status-present{% else %}status-absent{% endif %}">
+                                        {% if st.status == 'Present' %}
+                                            <i class="fas fa-check-circle"></i> {{ st.status }}
+                                        {% else %}
+                                            <i class="fas fa-times-circle"></i> {{ st.status }}
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="{% if st.paid == 'Yes' %}paid-yes{% else %}paid-no{% endif %}">
+                                        {% if st.paid == 'Yes' %}
+                                            <i class="fas fa-check"></i> {{ st.paid }}
+                                        {% else %}
+                                            <i class="fas fa-times"></i> {{ st.paid }}
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {% if st.exam_grade != '-' %}
+                                            <span class="badge badge-success">{{ st.exam_grade }}</span>
+                                        {% else %}
+                                            {{ st.exam_grade }}
+                                        {% endif %}
+                                    </td>
+                                    
+                                    <td>
+                                        {% if st.homework_status == 'اتعمل' %}
+                                            <span class="badge badge-success">
+                                                <i class="fas fa-check"></i> {{ st.homework_status }}
+                                            </span>
+                                        {% elif st.homework_status == 'متعملش' %}
+                                            <span class="badge badge-danger">
+                                                <i class="fas fa-times"></i> {{ st.homework_status }}
+                                            </span>
+                                        {% else %}
+                                            {{ st.homework_status }}
+                                        {% endif %}
+                                    </td>
+                                    
+                                    <td><strong>{{ st.payment_amount }} ج.م</strong></td>
+                                    
+                                    <td>
+                                        {% if st.status == 'Absent' %}
+                                        <a href="/manual_send_whatsapp/{{ st.id }}" 
+                                           class="btn btn-success btn-sm" 
+                                           target="_blank">
+                                           <i class="fab fa-whatsapp"></i> واتساب
+                                        </a>
+                                        {% else %}
+                                        <button class="btn btn-secondary btn-sm" disabled>
+                                            <i class="fas fa-check"></i> حاضر
+                                        </button>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {% if st.status == 'Present' %}
+                                        <a href="/send_present_report/{{ st.id }}" 
+                                           class="btn btn-info btn-sm" 
+                                           target="_blank">
+                                           <i class="fas fa-paper-plane"></i> إرسال
+                                        </a>
+                                        {% else %}
+                                        <button class="btn btn-secondary btn-sm" disabled>
+                                            <i class="fas fa-times"></i> غائب
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- المكتبات -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

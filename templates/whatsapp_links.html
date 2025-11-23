@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>روابط واتساب - الطلاب الغائبين</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        body {
+            background: #f3f6fa;
+            font-family: "Tajawal", sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100%;
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+        .sidebar a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 12px 15px;
+            margin: 8px 0;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .sidebar a:hover {
+            background: #34495e;
+        }
+        .sidebar .logout {
+            background: #e74c3c;
+            margin-top: 20px;
+        }
+        .sidebar .logout:hover {
+            background: #c0392b;
+        }
+        .main-content {
+            margin-right: 250px;
+            padding: 20px;
+        }
+        .container-box {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .whatsapp-link {
+            background: #e8f5e8;
+            border: 2px solid #25D366;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .btn-whatsapp {
+            background-color: #25D366;
+            border-color: #25D366;
+            color: white;
+        }
+        .btn-whatsapp:hover {
+            background-color: #128C7E;
+            border-color: #128C7E;
+        }
+        .header-buttons {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- الشريط الجانبي -->
+<div class="sidebar">
+    <h4 class="text-center mb-4">🏫 نظام الحضور</h4>
+    
+    <a href="/">🏠 الصفحة الرئيسية</a>
+    <a href="/daily_report">📋 التقرير اليومي</a>
+    <a href="/admin">📊 التقارير الشهرية</a>
+    <a href="/manage_students">👥 إدارة الطلاب</a>
+    <a href="/bulk_grades">🎯 توزيع الدرجات</a>
+    <a href="/add_student">➕ إضافة طالب</a>
+    <a href="/generate_whatsapp_links">💬 روابط واتساب</a>
+    
+    <div class="mt-4 pt-4 border-top">
+        <span class="d-block text-center mb-2">👤 {{ username }}</span>
+        <a href="/logout" class="logout text-center">🚪 تسجيل الخروج</a>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="container-box">
+        <div class="header-buttons">
+            <a href="/admin" class="btn btn-secondary">← الرجوع للوحة التحكم</a>
+            <a href="/" class="btn btn-primary">🏠 الصفحة الرئيسية</a>
+        </div>
+        
+        <h2 class="text-center mb-4">💬 روابط واتساب للطلاب الغائبين</h2>
+        
+        {% if links %}
+            <div class="alert alert-info">
+                <strong>عدد الطلاب الغائبين:</strong> {{ links|length }}
+            </div>
+            
+            {% for link in links %}
+            <div class="whatsapp-link">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5>{{ link.student_name }}</h5>
+                        <p class="mb-1"><strong>رقم ولي الأمر:</strong> {{ link.parent_number }}</p>
+                    </div>
+                    <div class="col-md-6 text-start">
+                        <a href="{{ link.whatsapp_link }}" 
+                           class="btn btn-whatsapp btn-lg"
+                           target="_blank">
+                           💬 إرسال رسالة واتساب
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-warning text-center">
+                <h4>لا توجد روابط واتساب متاحة</h4>
+                <p>لا يوجد طلاب غائبين اليوم أو لم يتم إنشاء الروابط بعد</p>
+                <a href="/generate_whatsapp_links" class="btn btn-primary">إنشاء الروابط</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

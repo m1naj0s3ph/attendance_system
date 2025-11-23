@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>صفحة الطالب - نظام الحضور</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- زر فتح الشريط الجانبي -->
+    <button class="menu-toggle" id="menuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- الشريط الجانبي -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h4>🏫 نظام الحضور</h4>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li><a href="/"><i class="fas fa-home"></i> الصفحة الرئيسية</a></li>
+            <li><a href="/daily_report"><i class="fas fa-file-alt"></i> التقرير اليومي</a></li>
+            <li><a href="/admin"><i class="fas fa-chart-bar"></i> التقارير الشهرية</a></li>
+            <li><a href="/manage_students"><i class="fas fa-users"></i> إدارة الطلاب</a></li>
+            <li><a href="/bulk_grades"><i class="fas fa-tasks"></i> توزيع الدرجات</a></li>
+            <li><a href="/add_student"><i class="fas fa-user-plus"></i> إضافة طالب</a></li>
+            <li><a href="/generate_whatsapp_links"><i class="fab fa-whatsapp"></i> روابط واتساب</a></li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user"></i> {{ username }}
+            </div>
+            <a href="/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </a>
+        </div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content">
+        <div class="container-box">
+            <a href="/" class="btn btn-secondary mb-3">
+                <i class="fas fa-arrow-right"></i> الرجوع للصفحة الرئيسية
+            </a>
+
+            <h2 class="text-center mb-4"><i class="fas fa-user"></i> صفحة الطالب</h2>
+
+            <!-- معلومات الطالب -->
+            <div class="stats-grid mb-4">
+                <div class="stat-card">
+                    <div class="stat-number">{{ student.id }}</div>
+                    <div class="stat-label">رقم الطالب</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ student.student_name }}</div>
+                    <div class="stat-label">اسم الطالب</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ student.parent_number }}</div>
+                    <div class="stat-label">رقم ولي الأمر</div>
+                </div>
+            </div>
+
+            <!-- حالة الحصة -->
+            {% if current_class %}
+            <div class="alert alert-success">
+                <h5><i class="fas fa-check-circle"></i> لديك حصة اليوم</h5>
+                <p class="mb-0">اليوم: 
+                    {% if current_class.day_of_week == 'sunday' %}الأحد
+                    {% elif current_class.day_of_week == 'monday' %}الإثنين
+                    {% elif current_class.day_of_week == 'tuesday' %}الثلاثاء
+                    {% elif current_class.day_of_week == 'wednesday' %}الأربعاء
+                    {% elif current_class.day_of_week == 'thursday' %}الخميس
+                    {% elif current_class.day_of_week == 'friday' %}الجمعة
+                    {% elif current_class.day_of_week == 'saturday' %}السبت
+                    {% endif %}
+                </p>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <h5><i class="fas fa-exclamation-triangle"></i> اليوم ليس يوم حصة للطالب</h5>
+                <p class="mb-0">لا يمكن تسجيل الحضور أو تعديل البيانات</p>
+            </div>
+            {% endif %}
+
+            <!-- التنبيهات -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} fade-in">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- آخر تحديث -->
+            <div class="table-container mb-4">
+                <div class="table-header">
+                    <h3><i class="fas fa-history"></i> آخر تحديث اليوم</h3>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الحالة</th>
+                                <th>الواجب</th>
+                                <th>درجة الامتحان</th>
+                                <th>مدفوع</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if history %}
+                                {% for h in history %}
+                                <tr>
+                                    <td>{{ h.date }}</td>
+                                    <td class="{% if h.status == 'Present' %}status-present{% else %}status-absent{% endif %}">
+                                        {% if h.status == 'Present' %}
+                                            <i class="fas fa-check-circle"></i> {{ h.status }}
+                                        {% else %}
+                                            <i class="fas fa-times-circle"></i> {{ h.status }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ h.homework_status }}</td>
+                                    <td>{{ h.exam_grade }}</td>
+                                    <td class="{% if h.paid == 'Yes' %}paid-yes{% else %}paid-no{% endif %}">
+                                        {% if h.paid == 'Yes' %}
+                                            <i class="fas fa-check"></i> {{ h.paid }}
+                                        {% else %}
+                                            <i class="fas fa-times"></i> {{ h.paid }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center">لا توجد بيانات لهذا اليوم</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- نموذج التعديل -->
+            {% if current_class %}
+            <div class="form-container">
+                <h4 class="mb-3"><i class="fas fa-edit"></i> تحديث البيانات</h4>
+                <form method="POST" action="/add_record/{{ student.id }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="grade" class="form-label">درجة الامتحان</label>
+                                <input type="text" class="form-control" id="grade" name="grade" placeholder="أدخل الدرجة">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="hw" class="form-label">حالة الواجب</label>
+                                <select class="form-select" id="hw" name="hw">
+                                    <option value="اتعمل">اتعمل</option>
+                                    <option value="متعملش">متعملش</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save"></i> حفظ البيانات والعودة
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- الحصص الأسبوعية -->
+            <div class="table-container mt-4">
+                <div class="table-header">
+                    <h3><i class="fas fa-calendar-week"></i> الحصص الأسبوعية</h3>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>اليوم</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for class in weekly_classes %}
+                                <tr>
+                                    <td>
+                                        {% if class.day_of_week == 'sunday' %}الأحد
+                                        {% elif class.day_of_week == 'monday' %}الإثنين
+                                        {% elif class.day_of_week == 'tuesday' %}الثلاثاء
+                                        {% elif class.day_of_week == 'wednesday' %}الأربعاء
+                                        {% elif class.day_of_week == 'thursday' %}الخميس
+                                        {% elif class.day_of_week == 'friday' %}الجمعة
+                                        {% elif class.day_of_week == 'saturday' %}السبت
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if class.day_of_week == current_class.day_of_week|lower %}
+                                            <span class="badge badge-success">حصة اليوم</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">حصة أسبوعية</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            {% if not weekly_classes %}
+                                <tr>
+                                    <td colspan="2" class="text-center">لا توجد حصص لهذا الطالب</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- المكتبات -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

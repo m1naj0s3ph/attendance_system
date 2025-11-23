@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الماسح الضوئي - نظام الحضور</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Tajawal', sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        .scanner-container {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 500px;
+            margin: 0 auto;
+            color: #333;
+        }
+        #reader {
+            width: 100%;
+            margin: 20px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            position: relative;
+        }
+        #status {
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        .status-connected { background: #d4edda; color: #155724; }
+        .status-disconnected { background: #f8d7da; color: #721c24; }
+        .status-scanning { background: #fff3cd; color: #856404; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        .status-warning { background: #fff3cd; color: #856404; }
+        
+        .manual-input {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .scanner-overlay {
+            position: relative;
+            border: 3px solid #25D366;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .camera-permission {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .camera-fallback {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .browser-support {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .camera-guide {
+            background: #e2e3e5;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanner-container">
+        <div class="text-center mb-4">
+            <h2><i class="fas fa-camera"></i> الماسح الضوئي</h2>
+            <p class="text-muted">وجه الكاميرا نحو كود الطالب</p>
+        </div>
+
+        <div id="status" class="status-disconnected">
+            <i class="fas fa-plug"></i> جاري تهيئة النظام...
+        </div>
+
+        <!-- دليل استخدام الكاميرا -->
+        <div class="camera-guide">
+            <h6><i class="fas fa-info-circle"></i> نصائح للكاميرا:</h6>
+            <ul class="mb-0">
+                <li>استخدم الكاميرا الخلفية (ذات الجودة الأعلى)</li>
+                <li>تأكد من إضاءة جيدة</li>
+                <li>أبعد الهاتف مسافة 15-20 سم عن الكود</li>
+            </ul>
+        </div>
+
+        <!-- رسالة دعم المتصفح -->
+        <div class="browser-support" id="browserSupport" style="display: none;">
+            <h6><i class="fas fa-exclamation-triangle"></i> ملاحظة هامة:</h6>
+            <p class="mb-2">لأفضل أداء، استخدم أحدث إصدار من:</p>
+            <div class="d-flex justify-content-around">
+                <span class="badge bg-success">Chrome</span>
+                <span class="badge bg-primary">Firefox</span>
+                <span class="badge bg-info">Safari</span>
+            </div>
+        </div>
+
+        <!-- رسالة إذن الكاميرا -->
+        <div class="camera-permission" id="cameraPermission" style="display: none;">
+            <i class="fas fa-camera fa-2x mb-2"></i>
+            <h5>الإذن باستخدام الكاميرا</h5>
+            <p>يحتاج التطبيق إلى إذن لاستخدام الكاميرا للمسح</p>
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary" onclick="requestCameraPermission()">
+                    <i class="fas fa-camera"></i> السماح باستخدام الكاميرا
+                </button>
+                <button class="btn btn-outline-secondary" onclick="showManualInput()">
+                    <i class="fas fa-keyboard"></i> استخدام الإدخال اليدوي
+                </button>
+            </div>
+        </div>
+
+        <!-- بديل الكاميرا -->
+        <div class="camera-fallback" id="cameraFallback" style="display: none;">
+            <i class="fas fa-camera-slash fa-2x mb-2"></i>
+            <h5>الكاميرا غير متاحة</h5>
+            <p>يمكنك استخدام الإدخال اليدوي أدناه</p>
+            <button class="btn btn-secondary" onclick="showManualInput()">
+                <i class="fas fa-keyboard"></i> فتح الإدخال اليدوي
+            </button>
+        </div>
+
+        <!-- منطقة الماسح -->
+        <div class="scanner-overlay">
+            <div id="reader">
+                <div id="cameraPlaceholder" class="text-center p-4">
+                    <i class="fas fa-camera fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">جاري تحميل الكاميرا...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- الإدخال اليدوي -->
+        <div class="manual-input" id="manualInput" style="display: none;">
+            <h5><i class="fas fa-keyboard"></i> الإدخال اليدوي</h5>
+            <div class="input-group mb-3">
+                <input type="text" id="studentId" class="form-control" placeholder="أدخل رقم الطالب" autocomplete="off">
+                <button class="btn btn-primary" onclick="sendStudentId()">
+                    <i class="fas fa-paper-plane"></i> إرسال
+                </button>
+            </div>
+            <small class="text-muted">أدخل رقم الطالب ثم انقر إرسال</small>
+        </div>
+
+        <div class="mt-4 text-center">
+            <div id="lastScan" class="text-muted small"></div>
+            <div class="mt-2">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i>
+                    سيتم فتح صفحة الطالب تلقائياً على جهاز الكمبيوتر
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+    <script>
+        let html5QrcodeScanner = null;
+        let lastScanned = '';
+        let isCameraActive = false;
+        let scanAttempts = 0;
+        const MAX_SCAN_ATTEMPTS = 3;
+
+        // التحقق من دعم المتصفح
+        function checkBrowserSupport() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+            const isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+            const isFirefox = /Firefox/.test(navigator.userAgent);
+            
+            if (!isMobile) {
+                document.getElementById('browserSupport').style.display = 'block';
+            }
+            
+            if (!isChrome && !isSafari && !isFirefox) {
+                document.getElementById('status').className = 'status-warning';
+                document.getElementById('status').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle"></i> المتصفح غير مدعوم بشكل كامل - جرب Chrome أو Safari';
+            }
+            
+            return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        }
+
+        // تهيئة الكاميرا
+        function initializeCamera() {
+            if (scanAttempts >= MAX_SCAN_ATTEMPTS) {
+                showCameraFallback();
+                return;
+            }
+
+            scanAttempts++;
+            
+            // محاولة تشغيل الكاميرا
+            initScanner();
+        }
+
+        // طلب إذن الكاميرا
+        function requestCameraPermission() {
+            // محاولة استخدام الكاميرا الخلفية أولاً
+            const constraints = {
+                video: {
+                    facingMode: { ideal: "environment" }, // الكاميرا الخلفية
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(function(stream) {
+                    // إيقاف الكاميرا فوراً بعد الحصول على الإذن
+                    stream.getTracks().forEach(track => track.stop());
+                    document.getElementById('cameraPermission').style.display = 'none';
+                    initScanner();
+                })
+                .catch(function(err) {
+                    console.error("❌ فشل في الحصول على إذن الكاميرا:", err);
+                    
+                    // محاولة باستخدام الكاميرا الأمامية كبديل
+                    const frontConstraints = {
+                        video: {
+                            facingMode: "user", // الكاميرا الأمامية
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }
+                    };
+                    
+                    navigator.mediaDevices.getUserMedia(frontConstraints)
+                        .then(function(stream) {
+                            stream.getTracks().forEach(track => track.stop());
+                            document.getElementById('cameraPermission').style.display = 'none';
+                            initScanner();
+                        })
+                        .catch(function(err2) {
+                            console.error("❌ فشل في الحصول على إذن الكاميرا الأمامية:", err2);
+                            showCameraFallback();
+                        });
+                });
+        }
+
+        // عرض بديل الكاميرا
+        function showCameraFallback() {
+            document.getElementById('cameraFallback').style.display = 'block';
+            document.getElementById('cameraPermission').style.display = 'none';
+            document.getElementById('status').className = 'status-error';
+            document.getElementById('status').innerHTML = 
+                '<i class="fas fa-camera-slash"></i> الكاميرا غير متاحة - استخدم الإدخال اليدوي';
+            showManualInput();
+        }
+
+        // عرض الإدخال اليدوي
+        function showManualInput() {
+            document.getElementById('manualInput').style.display = 'block';
+            document.getElementById('studentId').focus();
+        }
+
+        // تهيئة الماسح الضوئي
+        function initScanner() {
+            if (isCameraActive) return;
+
+            try {
+                // استخدام HTML5 QR Code Scanner
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "reader", 
+                    { 
+                        fps: 10, 
+                        qrbox: { width: 250, height: 250 },
+                        aspectRatio: 1.0,
+                        supportedScanTypes: [
+                            Html5QrcodeScanType.SCAN_TYPE_QR_CODE,
+                            Html5QrcodeScanType.SCAN_TYPE_CAMERA
+                        ]
+                    },
+                    false
+                );
+
+                html5QrcodeScanner.render(
+                    onScanSuccess,
+                    onScanFailure
+                ).then(() => {
+                    isCameraActive = true;
+                    scanAttempts = 0; // إعادة تعيين المحاولات
+                    document.getElementById('status').className = 'status-connected';
+                    document.getElementById('status').innerHTML = '<i class="fas fa-camera"></i> الكاميرا جاهزة - امسح الكود';
+                    document.getElementById('cameraPermission').style.display = 'none';
+                    document.getElementById('cameraFallback').style.display = 'none';
+                    document.getElementById('cameraPlaceholder').style.display = 'none';
+                }).catch(err => {
+                    console.error("❌ فشل تشغيل الماسح:", err);
+                    handleCameraError(err);
+                });
+            } catch (error) {
+                console.error("❌ خطأ في تهيئة الماسح:", error);
+                handleCameraError(error);
+            }
+        }
+
+        // التعامل مع أخطاء الكاميرا
+        function handleCameraError(error) {
+            console.error("🔧 تفاصيل الخطأ:", error);
+            
+            if (error.name === 'NotAllowedError') {
+                document.getElementById('cameraPermission').style.display = 'block';
+                document.getElementById('status').className = 'status-warning';
+                document.getElementById('status').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle"></i> يلزم السماح باستخدام الكاميرا';
+            } else if (error.name === 'NotFoundError' || error.name === 'OverconstrainedError') {
+                showCameraFallback();
+            } else if (error.name === 'NotSupportedError') {
+                document.getElementById('status').className = 'status-error';
+                document.getElementById('status').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle"></i> المتصفح لا يدعم الكاميرا';
+                showCameraFallback();
+            } else {
+                document.getElementById('status').className = 'status-error';
+                document.getElementById('status').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle"></i> خطأ غير متوقع في الكاميرا';
+                
+                // محاولة مرة أخرى بعد تأخير
+                setTimeout(() => {
+                    if (scanAttempts < MAX_SCAN_ATTEMPTS) {
+                        initializeCamera();
+                    } else {
+                        showCameraFallback();
+                    }
+                }, 2000);
+            }
+        }
+
+        // إيقاف الماسح
+        function stopScanner() {
+            if (html5QrcodeScanner && isCameraActive) {
+                html5QrcodeScanner.clear().then(() => {
+                    isCameraActive = false;
+                    console.log("✅ تم إيقاف الماسح الضوئي");
+                }).catch(err => {
+                    console.error("❌ خطأ في إيقاف الماسح:", err);
+                });
+            }
+        }
+
+        // عند المسح الناجح
+        function onScanSuccess(decodedText) {
+            if (decodedText === lastScanned) return; // منع التكرار
+            
+            lastScanned = decodedText;
+            
+            // استخراج رقم الطالب من الرابط (إذا كان الرابط كاملاً)
+            let studentId = decodedText;
+            if (decodedText.includes('/student/')) {
+                studentId = decodedText.split('/student/')[1];
+            }
+            
+            // التحقق من صحة رقم الطالب
+            if (!isValidStudentId(studentId)) {
+                console.warn("⚠️  رقم طالب غير صالح:", studentId);
+                return;
+            }
+            
+            document.getElementById('status').className = 'status-scanning';
+            document.getElementById('status').innerHTML = `<i class="fas fa-sync fa-spin"></i> جاري إرسال ${studentId}...`;
+            
+            sendStudentToServer(studentId);
+        }
+
+        // التحقق من صحة رقم الطالب
+        function isValidStudentId(studentId) {
+            return studentId && studentId.length > 0 && /^[a-zA-Z0-9\-_]+$/.test(studentId);
+        }
+
+        // عند فشل المسح
+        function onScanFailure(error) {
+            // تجاهل أخطاء المسح المستمرة (هذه طبيعية)
+        }
+
+        // إرسال رقم الطالب إلى الخادم
+        function sendStudentToServer(studentId) {
+            // إنشاء طلب AJAX لإرسال رقم الطالب
+            fetch('/direct_scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `student_id=${encodeURIComponent(studentId)}`
+            })
+            .then(response => {
+                if (response.ok) {
+                    // إصدار صوت للمسح الناجح
+                    playBeepSound();
+                    
+                    // تحديث الواجهة
+                    document.getElementById('lastScan').innerHTML = 
+                        `<i class="fas fa-check"></i> آخر مسح: ${studentId} - ${new Date().toLocaleTimeString()}`;
+                    
+                    // إعادة تعيين الحالة بعد ثانية
+                    setTimeout(() => {
+                        if (isCameraActive) {
+                            document.getElementById('status').className = 'status-connected';
+                            document.getElementById('status').innerHTML = '<i class="fas fa-camera"></i> الكاميرا جاهزة - امسح الكود';
+                        }
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('❌ خطأ في إرسال البيانات:', error);
+            });
+        }
+
+        // تشغيل صوت للمسح الناجح
+        function playBeepSound() {
+            try {
+                // إنشاء صوت بسيط باستخدام Web Audio API
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch (e) {
+                // تجاهل أخطاء الصوت
+            }
+        }
+
+        // إرسال من الإدخال اليدوي
+        function sendStudentId() {
+            const studentId = document.getElementById('studentId').value.trim();
+            if (!studentId) {
+                alert('يرجى إدخال رقم الطالب');
+                return;
+            }
+            
+            if (!isValidStudentId(studentId)) {
+                alert('رقم الطالب غير صالح');
+                return;
+            }
+            
+            document.getElementById('studentId').value = '';
+            sendStudentToServer(studentId);
+        }
+
+        // بدء التشغيل عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            // إظهار دعم المتصفح
+            checkBrowserSupport();
+            
+            // إرسال عند الضغط على Enter
+            document.getElementById('studentId').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendStudentId();
+                }
+            });
+
+            // محاولة تشغيل الكاميرا تلقائياً بعد تحميل الصفحة
+            setTimeout(initializeCamera, 1000);
+        });
+
+        // تنظيف الماسح عند إغلاق الصفحة
+        window.addEventListener('beforeunload', function() {
+            stopScanner();
+        });
+
+        // التعامل مع تغيير حالة الكاميرا
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // الصفحة غير مرئية - إيقاف الكاميرا للحفاظ على البطارية
+                stopScanner();
+            } else {
+                // الصفحة مرئية - إعادة تشغيل الكاميرا
+                setTimeout(() => {
+                    if (!isCameraActive) {
+                        initializeCamera();
+                    }
+                }, 500);
+            }
+        });
+    </script>
+</body>
+</html>

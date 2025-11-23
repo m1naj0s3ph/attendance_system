@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>نظام الحضور - الصفحة الرئيسية</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            font-family: 'Tajawal', sans-serif;
+            min-height: 100vh;
+            color: white;
+        }
+        .display-container {
+            text-align: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .status-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .student-info {
+            background: white;
+            color: #2c3e50;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+        .manual-input {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <!-- زر فتح الشريط الجانبي -->
+    <button class="menu-toggle" id="menuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- الشريط الجانبي -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h4>🏫 نظام الحضور</h4>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li><a href="/" class="active"><i class="fas fa-home"></i> الصفحة الرئيسية</a></li>
+            <li><a href="/daily_report"><i class="fas fa-file-alt"></i> التقرير اليومي</a></li>
+            <li><a href="/admin"><i class="fas fa-chart-bar"></i> التقارير الشهرية</a></li>
+            <li><a href="/manage_students"><i class="fas fa-users"></i> إدارة الطلاب</a></li>
+            <li><a href="/bulk_grades"><i class="fas fa-tasks"></i> توزيع الدرجات</a></li>
+            <li><a href="/add_student"><i class="fas fa-user-plus"></i> إضافة طالب</a></li>
+            <li><a href="/generate_whatsapp_links"><i class="fab fa-whatsapp"></i> روابط واتساب</a></li>
+            <li><a href="/remote_scanner" target="_blank"><i class="fas fa-camera"></i> الماسح الضوئي</a></li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user"></i> {{ username }}
+            </div>
+            <a href="/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </a>
+        </div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content">
+        <div class="display-container">
+            <!-- الصورة الشخصية -->
+            <div class="profile-image">
+                <img src="{{ url_for('static', filename='50f83c12-518b-44e5-8be8-ba1db2b6cc9c.jfif.jfif') }}" 
+                     alt="Mr Abanoub George" 
+                     class="profile-img" style="width: 150px; height: 150px; border-radius: 50%; border: 4px solid white; margin-bottom: 20px;">
+            </div>
+            
+            <div class="name-title" style="font-size: 2em; margin-bottom: 10px;">Mr Abanoub George</div>
+            <p class="lead" style="margin-bottom: 30px;">نظام الحضور الآلي المتكامل</p>
+
+            <!-- التنبيهات -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} fade-in" style="max-width: 600px; margin: 0 auto 20px;">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- حالة الاتصال وانتظار المسح -->
+            <div class="status-box">
+                <div id="connectionStatus">
+                    <i class="fas fa-sync fa-spin"></i>
+                    <h3>جاري الاتصال بالخادم...</h3>
+                </div>
+                
+                <div id="waitingMessage">
+                    <i class="fas fa-hourglass-half fa-2x mb-3"></i>
+                    <h4>في انتظار مسح طالب...</h4>
+                    <p>سيتم عرض صفحة الطالب هنا تلقائياً عند المسح</p>
+                </div>
+            </div>
+
+            <!-- الإدخال اليدوي -->
+            <div class="manual-input">
+                <h4><i class="fas fa-keyboard"></i> الإدخال اليدوي لرقم الطالب</h4>
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <div class="input-group mb-3">
+                            <input type="text" id="studentId" class="form-control" placeholder="أدخل رقم الطالب" autocomplete="off">
+                            <button class="btn btn-primary" onclick="sendStudentId()">
+                                <i class="fas fa-paper-plane"></i> إرسال
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <small class="text-muted">يمكنك استخدام الإدخال اليدوي أو الماسح الضوئي على التليفون</small>
+            </div>
+
+            <!-- معلومات الطالب -->
+            <div id="studentInfo" class="student-info">
+                <h4><i class="fas fa-user-graduate"></i> جاري فتح صفحة الطالب...</h4>
+                <div id="studentDetails"></div>
+            </div>
+
+            <!-- تعليمات التشغيل -->
+            <div class="instructions" style="background: rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 20px; margin-top: 30px;">
+                <h5><i class="fas fa-info-circle"></i> تعليمات التشغيل:</h5>
+                <div class="row text-center mt-3">
+                    <div class="col-md-4">
+                        <i class="fas fa-mobile-alt fa-2x mb-2"></i>
+                        <p>افتح الماسح على التليفون</p>
+                    </div>
+                    <div class="col-md-4">
+                        <i class="fas fa-camera fa-2x mb-2"></i>
+                        <p>امسح كود الطالب</p>
+                    </div>
+                    <div class="col-md-4">
+                        <i class="fas fa-desktop fa-2x mb-2"></i>
+                        <p>شاهد النتيجة هنا تلقائياً</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="/remote_scanner" target="_blank" class="btn btn-warning">
+                        <i class="fas fa-camera"></i> فتح الماسح الضوئي للتليفون
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <script>
+        const socket = io();
+        let currentStudent = null;
+
+        // تحديث حالة الاتصال
+        socket.on('connect', function() {
+            document.getElementById('connectionStatus').innerHTML = 
+                '<i class="fas fa-wifi"></i><h3>✅ متصل بالخادم</h3>';
+        });
+
+        socket.on('disconnect', function() {
+            document.getElementById('connectionStatus').innerHTML = 
+                '<i class="fas fa-plug"></i><h3>❌ انقطع الاتصال</h3>';
+        });
+
+        // استقبال أمر فتح صفحة الطالب
+        socket.on('open_student_page', function(data) {
+            const studentId = data.student_id;
+            currentStudent = studentId;
+            
+            // عرض معلومات الطالب
+            document.getElementById('studentInfo').style.display = 'block';
+            document.getElementById('studentDetails').innerHTML = `
+                <div class="alert alert-info">
+                    <h5>الطالب رقم: ${studentId}</h5>
+                    <p>جاري التوجيه إلى صفحة الطالب...</p>
+                </div>
+            `;
+            
+            document.getElementById('waitingMessage').innerHTML = `
+                <i class="fas fa-check-circle"></i>
+                <h4>✅ تم مسح الطالب ${studentId}</h4>
+                <p>جاري فتح الصفحة...</p>
+            `;
+            
+            // فتح صفحة الطالب بعد تأخير بسيط
+            setTimeout(() => {
+                window.location.href = `/student/${studentId}`;
+            }, 1500);
+        });
+
+        // إرسال رقم الطالب يدوياً
+        function sendStudentId() {
+            const studentId = document.getElementById('studentId').value.trim();
+            if (!studentId) {
+                alert('يرجى إدخال رقم الطالب');
+                return;
+            }
+            
+            document.getElementById('studentId').value = '';
+            socket.emit('scan_result', { student_id: studentId });
+            
+            // تحديث الواجهة
+            document.getElementById('waitingMessage').innerHTML = 
+                `<i class="fas fa-sync fa-spin"></i><h4>جاري إرسال ${studentId}...</h4>`;
+        }
+
+        // إرسال عند الضغط على Enter
+        document.getElementById('studentId').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendStudentId();
+            }
+        });
+
+        // إعادة التعيين بعد العودة من صفحة الطالب
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+                // إذا عاد المستخدم من صفحة الطالب، أعرض رسالة الانتظار
+                document.getElementById('waitingMessage').innerHTML = `
+                    <i class="fas fa-hourglass-half"></i>
+                    <h4>في انتظار مسح طالب...</h4>
+                    <p>سيتم عرض صفحة الطالب هنا تلقائياً</p>
+                `;
+                document.getElementById('studentInfo').style.display = 'none';
+            }
+        });
+
+        // تركيز على حقل الإدخال عند فتح الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('studentId').focus();
+        });
+    </script>
+</body>
+</html>

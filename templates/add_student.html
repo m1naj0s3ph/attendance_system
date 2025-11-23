@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إضافة طالب جديد - نظام الحضور</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- زر فتح الشريط الجانبي -->
+    <button class="menu-toggle" id="menuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- الشريط الجانبي -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h4>🏫 نظام الحضور</h4>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li><a href="/"><i class="fas fa-home"></i> الصفحة الرئيسية</a></li>
+            <li><a href="/daily_report"><i class="fas fa-file-alt"></i> التقرير اليومي</a></li>
+            <li><a href="/admin"><i class="fas fa-chart-bar"></i> التقارير الشهرية</a></li>
+            <li><a href="/manage_students"><i class="fas fa-users"></i> إدارة الطلاب</a></li>
+            <li><a href="/bulk_grades"><i class="fas fa-tasks"></i> توزيع الدرجات</a></li>
+            <li><a href="/add_student" class="active"><i class="fas fa-user-plus"></i> إضافة طالب</a></li>
+            <li><a href="/generate_whatsapp_links"><i class="fab fa-whatsapp"></i> روابط واتساب</a></li>
+            <li><a href="/remote_scanner" target="_blank"><i class="fas fa-camera"></i> الماسح الضوئي</a></li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user"></i> {{ username }}
+            </div>
+            <a href="/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </a>
+        </div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content">
+        <div class="container-box">
+            <a href="/admin" class="btn btn-secondary mb-3">
+                <i class="fas fa-arrow-right"></i> الرجوع للوحة التحكم
+            </a>
+            
+            <h2 class="text-center mb-4"><i class="fas fa-user-plus"></i> إضافة طالب جديد</h2>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} fade-in">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="/add_student">
+                <!-- معلومات الطالب الأساسية -->
+                <div class="form-container mb-4">
+                    <h4 class="mb-3"><i class="fas fa-user"></i> معلومات الطالب</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="student_id" class="form-label">رقم الطالب *</label>
+                                <input type="text" class="form-control" id="student_id" name="student_id" required placeholder="أدخل رقم الطالب">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="student_name" class="form-label">اسم الطالب *</label>
+                                <input type="text" class="form-control" id="student_name" name="student_name" required placeholder="أدخل اسم الطالب">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="parent_number" class="form-label">رقم ولي الأمر</label>
+                                <input type="text" class="form-control" id="parent_number" name="parent_number" placeholder="أدخل رقم ولي الأمر">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="payment_amount" class="form-label">رسوم الحصة (ج.م)</label>
+                                <input type="number" step="0.01" class="form-control" id="payment_amount" name="payment_amount" placeholder="أدخل رسوم الحصة" value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم إضافة الحصص -->
+                <div class="form-container">
+                    <h4 class="mb-3"><i class="fas fa-calendar"></i> إضافة الحصص (اختياري)</h4>
+                    <div id="classes-container">
+                        <div class="class-entry mb-3 p-3 border rounded">
+                            <div class="row g-2">
+                                <div class="col-md-10">
+                                    <label class="form-label">اليوم</label>
+                                    <select class="form-select" name="day_of_week[]">
+                                        <option value="sunday">الأحد</option>
+                                        <option value="monday">الإثنين</option>
+                                        <option value="tuesday">الثلاثاء</option>
+                                        <option value="wednesday">الأربعاء</option>
+                                        <option value="thursday">الخميس</option>
+                                        <option value="friday">الجمعة</option>
+                                        <option value="saturday">السبت</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="button" class="btn btn-danger w-100 remove-class" style="display: none;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary" id="add-class">
+                        <i class="fas fa-plus"></i> إضافة حصة أخرى
+                    </button>
+                </div>
+                
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-user-plus"></i> إضافة الطالب وإنشاء QR Code
+                    </button>
+                </div>
+            </form>
+            
+            <div class="alert alert-info mt-4">
+                <h5><i class="fas fa-lightbulb"></i> ملاحظات:</h5>
+                <ul class="mb-0">
+                    <li>سيتم إنشاء QR Code تلقائياً للطالب الجديد</li>
+                    <li>سيتم حفظ الطالب في ملف Excel تلقائياً</li>
+                    <li>يمكنك إضافة الحصص لاحقاً من خلال صفحة إدارة الطلاب</li>
+                    <li>لإدارة جميع الطلاب، انتقل إلى صفحة "إدارة الطلاب"</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- المكتبات -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <script>
+        document.getElementById('add-class').addEventListener('click', function() {
+            const container = document.getElementById('classes-container');
+            const newClass = container.firstElementChild.cloneNode(true);
+            
+            newClass.querySelector('.remove-class').style.display = 'block';
+            newClass.querySelector('select').selectedIndex = 0;
+            
+            container.appendChild(newClass);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-class')) {
+                if (document.querySelectorAll('.class-entry').length > 1) {
+                    e.target.closest('.class-entry').remove();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

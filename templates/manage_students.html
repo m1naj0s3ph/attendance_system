@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إدارة الطلاب - نظام الحضور</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- زر فتح الشريط الجانبي -->
+    <button class="menu-toggle" id="menuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- الشريط الجانبي -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h4>🏫 نظام الحضور</h4>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li><a href="/"><i class="fas fa-home"></i> الصفحة الرئيسية</a></li>
+            <li><a href="/daily_report"><i class="fas fa-file-alt"></i> التقرير اليومي</a></li>
+            <li><a href="/admin"><i class="fas fa-chart-bar"></i> التقارير الشهرية</a></li>
+            <li><a href="/manage_students" class="active"><i class="fas fa-users"></i> إدارة الطلاب</a></li>
+            <li><a href="/bulk_grades"><i class="fas fa-tasks"></i> توزيع الدرجات</a></li>
+            <li><a href="/add_student"><i class="fas fa-user-plus"></i> إضافة طالب</a></li>
+            <li><a href="/generate_whatsapp_links"><i class="fab fa-whatsapp"></i> روابط واتساب</a></li>
+            <li><a href="/remote_scanner" target="_blank"><i class="fas fa-camera"></i> الماسح الضوئي</a></li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user"></i> {{ username }}
+            </div>
+            <a href="/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </a>
+        </div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content">
+        <div class="container-box">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <a href="/" class="btn btn-secondary">
+                    <i class="fas fa-home"></i> الصفحة الرئيسية
+                </a>
+                <h2 class="text-center mb-0"><i class="fas fa-users"></i> إدارة الطلاب</h2>
+                <div>
+                    <a href="/add_student" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> إضافة طالب
+                    </a>
+                </div>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} fade-in">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>رقم الطالب</th>
+                            <th>اسم الطالب</th>
+                            <th>رقم ولي الأمر</th>
+                            <th>رسوم الحصة</th>
+                            <th>الحصص</th>
+                            <th>QR Code</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr>
+                            <td><strong>{{ student.id }}</strong></td>
+                            <td>{{ student.student_name }}</td>
+                            <td>{{ student.parent_number }}</td>
+                            <td>{{ student.payment_amount }} ج.م</td>
+                            <td>
+                                <!-- عرض الحصص -->
+                                {% set student_classes = get_student_classes(student.id) %}
+                                {% if student_classes %}
+                                    {% for class in student_classes %}
+                                        <div class="class-schedule mb-2 p-2 border rounded">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>
+                                                    {% if class.day_of_week == 'sunday' %}الأحد
+                                                    {% elif class.day_of_week == 'monday' %}الإثنين
+                                                    {% elif class.day_of_week == 'tuesday' %}الثلاثاء
+                                                    {% elif class.day_of_week == 'wednesday' %}الأربعاء
+                                                    {% elif class.day_of_week == 'thursday' %}الخميس
+                                                    {% elif class.day_of_week == 'friday' %}الجمعة
+                                                    {% elif class.day_of_week == 'saturday' %}السبت
+                                                    {% endif %}
+                                                    : {{ class.start_time }}-{{ class.end_time }}
+                                                </span>
+                                                <a href="/delete_class/{{ class.id }}" class="btn btn-danger btn-sm" 
+                                                   onclick="return confirm('هل تريد حذف هذه الحصة؟')">
+                                                   <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">لا توجد حصص</span>
+                                {% endif %}
+                                
+                                <!-- نموذج إضافة حصة جديدة -->
+                                <div class="add-class-form mt-3 p-3 bg-light rounded">
+                                    <form method="POST" action="/add_class/{{ student.id }}">
+                                        <div class="row g-2">
+                                            <div class="col-md-3">
+                                                <select class="form-select form-select-sm" name="day_of_week" required>
+                                                    <option value="">اختر اليوم</option>
+                                                    <option value="sunday">الأحد</option>
+                                                    <option value="monday">الإثنين</option>
+                                                    <option value="tuesday">الثلاثاء</option>
+                                                    <option value="wednesday">الأربعاء</option>
+                                                    <option value="thursday">الخميس</option>
+                                                    <option value="friday">الجمعة</option>
+                                                    <option value="saturday">السبت</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="time" class="form-control form-control-sm" name="start_time" required>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="time" class="form-control form-control-sm" name="end_time" required>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <button type="submit" class="btn btn-success btn-sm w-100">
+                                                    <i class="fas fa-plus"></i> إضافة
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </td>
+                            <td>
+                                {% if student.id %}
+                                <a href="{{ url_for('static', filename='qr_codes/' + student.id + '.png') }}" 
+                                   target="_blank" class="btn btn-info btn-sm">
+                                   <i class="fas fa-qrcode"></i> QR
+                                </a>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="/student/{{ student.id }}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-eye"></i> عرض
+                                    </a>
+                                    <a href="/delete_student/{{ student.id }}" 
+                                       class="btn btn-danger btn-sm" 
+                                       onclick="return confirm('هل أنت متأكد من حذف الطالب {{ student.student_name }}؟')">
+                                       <i class="fas fa-trash"></i> حذف
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

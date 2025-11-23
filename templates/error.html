@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>خطأ في النظام</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Tajawal', sans-serif;
+            padding: 50px 20px;
+        }
+        .error-container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="alert alert-danger">
+            <h1><i class="fas fa-exclamation-triangle"></i> خطأ في النظام</h1>
+            <p>عذراً، حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.</p>
+            <p><small>{{ error }}</small></p>
+        </div>
+        <a href="/" class="btn btn-primary">العودة للصفحة الرئيسية</a>
+    </div>
+</body>
+</html>
